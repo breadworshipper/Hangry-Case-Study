@@ -90,10 +90,7 @@ const server: http.Server = http.createServer(
       })
     }
 
-    else if (
-      parsedUrl.pathname?.startsWith("/user/") &&
-      req.method === "DELETE"
-    ) {
+    else if (parsedUrl.pathname?.startsWith("/user/") && req.method === "DELETE") {
       const userId = parsedUrl.pathname.split("/")[2]
 
       db.run(`DELETE FROM users WHERE id = ?`, [userId], (err) => {
@@ -108,8 +105,72 @@ const server: http.Server = http.createServer(
           res.end(JSON.stringify({ message: "User deleted" }))
         }
       })
-    }
+    } else if (
+      parsedUrl.pathname?.startsWith("/user/") &&
+      req.method === "PUT"
+    ) {
+      const userId = parsedUrl.pathname.split("/")[2]
 
+      let body: string = ""
+      req.on("data", (chunk: string) => {
+        body += chunk
+      })
+
+      req.on("end", () => {
+        try {
+          const parsedBody = JSON.parse(body)
+
+          // Validate that at least one attribute is provided
+          const updates: string[] = []
+          const params: (string | number)[] = []
+
+          if (parsedBody.name) {
+            updates.push("name = ?")
+            params.push(parsedBody.name)
+          }
+          if (parsedBody.email) {
+            updates.push("email = ?")
+            params.push(parsedBody.email)
+          }
+          if (parsedBody.date_of_birth) {
+            updates.push("date_of_birth = ?")
+            params.push(parsedBody.date_of_birth)
+          }
+
+          if (updates.length === 0) {
+            res.statusCode = 400
+            res.setHeader("Content-Type", "application/json")
+            res.end(
+              JSON.stringify({ message: "No attributes provided for update" })
+            )
+            return
+          }
+
+          params.push(userId)
+
+          const sql = `UPDATE users SET ${updates.join(", ")} WHERE id = ?`
+
+          db.run(sql, params, (err) => {
+            if (err) {
+              console.error("Failed to update user:", err)
+              res.statusCode = 500
+              res.setHeader("Content-Type", "application/json")
+              res.end(JSON.stringify({ message: "Internal Server Error" }))
+            } else {
+              res.statusCode = 200
+              res.setHeader("Content-Type", "application/json")
+              res.end(JSON.stringify({ message: "User updated" }))
+            }
+          })
+        } catch (error) {
+          console.error("Failed to parse JSON:", error)
+          res.statusCode = 400
+          res.setHeader("Content-Type", "application/json")
+          res.end(JSON.stringify({ message: "Invalid JSON" }))
+        }
+      })
+    } 
+    
     else {
       res.statusCode = 404
       res.setHeader("Content-Type", "application/json")
