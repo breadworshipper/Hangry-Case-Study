@@ -1,4 +1,5 @@
 import * as http from "http"
+import { parse } from "path"
 import * as sqlite3 from "sqlite3"
 import * as url from 'url'
 
@@ -64,7 +65,7 @@ const server: http.Server = http.createServer(
         }
       })
     } 
-    
+
     else if (
       parsedUrl.pathname?.startsWith("/user/") &&
       req.method === "GET"
@@ -87,6 +88,32 @@ const server: http.Server = http.createServer(
           res.end(JSON.stringify(row))
         }
       })
+    }
+
+    else if (
+      parsedUrl.pathname?.startsWith("/user/") &&
+      req.method === "DELETE"
+    ) {
+      const userId = parsedUrl.pathname.split("/")[2]
+
+      db.run(`DELETE FROM users WHERE id = ?`, [userId], (err) => {
+        if (err) {
+          console.error("Failed to delete user:", err)
+          res.statusCode = 500
+          res.setHeader("Content-Type", "application/json")
+          res.end(JSON.stringify({ message: "Internal Server Error" }))
+        } else {
+          res.statusCode = 200
+          res.setHeader("Content-Type", "application/json")
+          res.end(JSON.stringify({ message: "User deleted" }))
+        }
+      })
+    }
+
+    else {
+      res.statusCode = 404
+      res.setHeader("Content-Type", "application/json")
+      res.end(JSON.stringify({ message: "Not Found" }))
     }
   }
 )
