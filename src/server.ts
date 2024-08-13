@@ -1,18 +1,6 @@
 import * as http from "http"
-import { parse } from "path"
-import * as sqlite3 from "sqlite3"
 import * as url from 'url'
-
-let db = new sqlite3.Database(
-  "./db/hangry.db",
-  sqlite3.OPEN_READWRITE,
-  (err) => {
-    if (err) {
-      console.error(err.message)
-    }
-    console.log("Connected to the database.")
-  }
-)
+import db from './db'
 
 const PORT: number = 3000
 
