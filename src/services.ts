@@ -131,10 +131,18 @@ export async function handlePutUser(
         params.push(parsedBody.name)
       }
       if (parsedBody.email) {
+        if (!isValidEmail(parsedBody.email)) {
+          sendResponse(res, 400, { message: "Invalid email" })
+          return
+        }
         updates.push("email = ?")
         params.push(parsedBody.email)
       }
       if (parsedBody.date_of_birth) {
+        if (!isValidDate(parsedBody.date_of_birth)) {
+          sendResponse(res, 400, { message: "Invalid date of birth" })
+          return
+        }
         updates.push("date_of_birth = ?")
         params.push(parsedBody.date_of_birth)
       }
