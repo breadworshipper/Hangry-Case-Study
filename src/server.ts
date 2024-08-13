@@ -4,7 +4,7 @@ import { handleRequest } from "./routes"
 const PORT: number = 3000
 
 const server: http.Server = http.createServer(
-    (req: http.IncomingMessage, res: http.ServerResponse) => {
+  (req: http.IncomingMessage, res: http.ServerResponse) => {
     handleRequest(req, res)
   }
 )
@@ -13,4 +13,3 @@ const server: http.Server = http.createServer(
 server.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`)
 })
-

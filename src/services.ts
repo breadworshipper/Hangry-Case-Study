@@ -2,7 +2,11 @@ import { IncomingMessage, ServerResponse } from "http"
 import * as url from "url"
 import { sendResponse } from "./utils"
 
-export function handlePostUser(req: IncomingMessage, res: ServerResponse, db: any){
+export function handlePostUser(
+  req: IncomingMessage,
+  res: ServerResponse,
+  db: any
+) {
   let body: string = ""
   req.on("data", (chunk: string) => {
     body += chunk
@@ -62,22 +66,22 @@ export function handleDeleteUser(
   res: ServerResponse,
   parsedUrl: url.UrlWithParsedQuery,
   db: any
-){
+) {
   const userId = parsedUrl.pathname!.split("/")[2]
 
   db.get(`SELECT * FROM users WHERE id = ?`, [userId], (err: any, row: any) => {
     if (err) {
-      console.error("Failed to query user:", err);
-      sendResponse(res, 500, { message: "Internal Server Error" });
+      console.error("Failed to query user:", err)
+      sendResponse(res, 500, { message: "Internal Server Error" })
     } else if (!row) {
-      sendResponse(res, 404, { message: "User not found" });
+      sendResponse(res, 404, { message: "User not found" })
     } else {
       db.run(`DELETE FROM users WHERE id = ?`, [userId], (err: any) => {
         if (err) {
-          console.error("Failed to delete user:", err);
-          sendResponse(res, 500, { message: "Internal Server Error" });
+          console.error("Failed to delete user:", err)
+          sendResponse(res, 500, { message: "Internal Server Error" })
         } else {
-          sendResponse(res, 200, { message: "User deleted" });
+          sendResponse(res, 200, { message: "User deleted" })
         }
       })
     }
@@ -85,10 +89,11 @@ export function handleDeleteUser(
 }
 
 export function handlePutUser(
-    req: IncomingMessage,
+  req: IncomingMessage,
   res: ServerResponse,
   parsedUrl: url.UrlWithParsedQuery,
-  db: any) {
+  db: any
+) {
   const userId = parsedUrl.pathname!.split("/")[2]
 
   let body: string = ""
@@ -129,9 +134,7 @@ export function handlePutUser(
         if (err) {
           console.error("Failed to update user:", err)
           sendResponse(res, 500, { message: "Internal Server Error" })
-        } 
-
-         else {
+        } else {
           sendResponse(res, 200, { message: "User updated" })
         }
       })
