@@ -1,6 +1,6 @@
 import { IncomingMessage, ServerResponse } from "http"
 import * as url from "url"
-import { sendResponse } from "./utils"
+import { sendResponse, isValidEmail, isValidDate } from "./utils"
 
 export function handlePostUser(
   req: IncomingMessage,
@@ -16,13 +16,27 @@ export function handlePostUser(
     try {
       const parsedBody = JSON.parse(body)
 
-      if (!parsedBody.name || !parsedBody.email || !parsedBody.date_of_birth) {
+      const requiredAttributes: boolean = parsedBody.name && parsedBody.email && parsedBody.date_of_birth
+      const validEmail: boolean = isValidEmail(parsedBody.email)
+      const validDate: boolean = isValidDate(parsedBody.date_of_birth)
+
+      if (!requiredAttributes) {
         sendResponse(res, 400, { message: "Missing required attributes" })
         return
       }
+    if (!validEmail) {
+        sendResponse(res, 400, { message: "Invalid email" })
+        return
+    }
+    if (!validDate) {
+        sendResponse(res, 400, { message: "Invalid date of birth" })
+        return
+    }
+
+      const sql: string = `INSERT INTO users (name, email, date_of_birth) VALUES (?, ?, ?)`
 
       db.run(
-        `INSERT INTO users (name, email, date_of_birth) VALUES (?, ?, ?)`,
+        sql,
         [parsedBody.name, parsedBody.email, parsedBody.date_of_birth],
         (err: any) => {
           if (err) {
