@@ -17,54 +17,50 @@ export async function handlePostUser(
   res: ServerResponse,
   db: sqlite3.Database
 ) {
-  try {
-    let body: string = ""
-    req.on("data", (chunk: string) => {
-      body += chunk
-    })
+  let body: string = ""
+  req.on("data", (chunk: string) => {
+    body += chunk
+  })
 
-    req.on("end", async () => {
-        try {
-          const parsedBody = JSON.parse(body)
+  req.on("end", async () => {
+    try {
+      const parsedBody = JSON.parse(body)
 
-          const requiredAttributes: boolean =
-            parsedBody.name && parsedBody.email && parsedBody.date_of_birth
-          const validEmail: boolean = isValidEmail(parsedBody.email)
-          const validDate: boolean = isValidDate(parsedBody.date_of_birth)
+      const requiredAttributes: boolean =
+        parsedBody.name && parsedBody.email && parsedBody.date_of_birth
+      const validEmail: boolean = isValidEmail(parsedBody.email)
+      const validDate: boolean = isValidDate(parsedBody.date_of_birth)
 
-          if (!requiredAttributes) {
-            sendResponse(res, 400, { message: "Missing required attributes" })
-            return
-          }
-          if (!validEmail) {
-            sendResponse(res, 400, { message: "Invalid email" })
-            return
-          }
-          if (!validDate) {
-            sendResponse(res, 400, { message: "Invalid date of birth" })
-            return
-          }
+      if (!requiredAttributes) {
+        sendResponse(res, 400, { message: "Missing required attributes" })
+        return
+      }
+      if (!validEmail) {
+        sendResponse(res, 400, { message: "Invalid email" })
+        return
+      }
+      if (!validDate) {
+        sendResponse(res, 400, { message: "Invalid date of birth" })
+        return
+      }
 
-        const existingUser = await queryUserByEmail(db, parsedBody.email)
-        if (existingUser) {
-            sendResponse(res, 409, { message: "Email already exists" })
-            return
-        }
+      const existingEmail = await queryUserByEmail(db, parsedBody.email)
+      if (existingEmail) {
+        sendResponse(res, 409, { message: "Email already exists" })
+        return
+      }
 
-          await postUser(
-            db,
-            parsedBody.name,
-            parsedBody.email,
-            parsedBody.date_of_birth
-          )
-          sendResponse(res, 201, { message: "User created" })
-        } catch (error) {
-          sendResponse(res, 500, { message: `Internal server error: ${error}` })
-        }
-    })
-  } catch (error) {
-    sendResponse(res, 500, { message: "Internal server error" })
-  }
+      await postUser(
+        db,
+        parsedBody.name,
+        parsedBody.email,
+        parsedBody.date_of_birth
+      )
+      sendResponse(res, 201, { message: "User created" })
+    } catch (error) {
+      sendResponse(res, 500, { message: `Internal server error: ${error}` })
+    }
+  })
 }
 
 export async function handleGetUser(
@@ -130,43 +126,55 @@ export async function handlePutUser(
       body += chunk
     })
 
-    req.on("end", () => {
-      const parsedBody = JSON.parse(body)
+    req.on("end", async () => {
+      try {
+        const parsedBody = JSON.parse(body)
 
-      const updates: string[] = []
-      const params: (string | number)[] = []
+        const updates: string[] = []
+        const params: (string | number)[] = []
 
-      if (parsedBody.name) {
-        updates.push("name = ?")
-        params.push(parsedBody.name)
-      }
-      if (parsedBody.email) {
-        if (!isValidEmail(parsedBody.email)) {
-          sendResponse(res, 400, { message: "Invalid email" })
+        const existingEmail = await queryUserByEmail(db, parsedBody.email)
+        if (existingEmail && existingEmail.id !== userId) {
+          sendResponse(res, 409, { message: "Email already exists" })
           return
         }
-        updates.push("email = ?")
-        params.push(parsedBody.email)
-      }
-      if (parsedBody.date_of_birth) {
-        if (!isValidDate(parsedBody.date_of_birth)) {
-          sendResponse(res, 400, { message: "Invalid date of birth" })
+
+        if (parsedBody.name) {
+          updates.push("name = ?")
+          params.push(parsedBody.name)
+        }
+        if (parsedBody.email) {
+          if (!isValidEmail(parsedBody.email)) {
+            sendResponse(res, 400, { message: "Invalid email" })
+            return
+          }
+          updates.push("email = ?")
+          params.push(parsedBody.email)
+        }
+        if (parsedBody.date_of_birth) {
+          if (!isValidDate(parsedBody.date_of_birth)) {
+            sendResponse(res, 400, { message: "Invalid date of birth" })
+            return
+          }
+          updates.push("date_of_birth = ?")
+          params.push(parsedBody.date_of_birth)
+        }
+
+        if (updates.length === 0) {
+          sendResponse(res, 400, {
+            message: "No attributes provided for update"
+          })
           return
         }
-        updates.push("date_of_birth = ?")
-        params.push(parsedBody.date_of_birth)
+
+        params.push(userId)
+
+        updateUser(db, updates, params).then(() => {
+          sendResponse(res, 200, { message: "User updated" })
+        })
+      } catch (error) {
+        sendResponse(res, 500, { message: "Internal Server Error" })
       }
-
-      if (updates.length === 0) {
-        sendResponse(res, 400, { message: "No attributes provided for update" })
-        return
-      }
-
-      params.push(userId)
-
-      updateUser(db, updates, params).then(() => {
-        sendResponse(res, 200, { message: "User updated" })
-      })
     })
   } catch (error) {
     sendResponse(res, 500, { message: "Internal Server Error" })
