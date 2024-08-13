@@ -2,6 +2,7 @@
 ## Table of Contents
 - [Description](#description)
 - [How to run?](#how-to-run)
+- [Endpoints](#endpoints)
 
 ## Description
 This repository is dedicated for the Hangry study case for the backend engineer intern position. The repository contains a User CRUD REST API developed with TypeScript with a runtime of Node.js. The API contains 4 routes and uses a SQLite database to store user's information. 
