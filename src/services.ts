@@ -16,13 +16,13 @@ export async function handlePostUser(
   res: ServerResponse,
   db: sqlite3.Database
 ) {
-  let body: string = ""
-  req.on("data", (chunk: string) => {
-    body += chunk
-  })
+  try {
+    let body: string = ""
+    req.on("data", (chunk: string) => {
+      body += chunk
+    })
 
-  req.on("end", () => {
-    try {
+    req.on("end", () => {
       const parsedBody = JSON.parse(body)
 
       const requiredAttributes: boolean =
@@ -51,10 +51,10 @@ export async function handlePostUser(
       ).then(() => {
         sendResponse(res, 201, { message: "User created" })
       })
-    } catch (error) {
-      sendResponse(res, 500, { message: "Internal server error" })
-    }
-  })
+    })
+  } catch (error) {
+    sendResponse(res, 500, { message: "Internal server error" })
+  }
 }
 
 export async function handleGetUser(
@@ -82,9 +82,9 @@ export async function handleDeleteUser(
   parsedUrl: url.UrlWithParsedQuery,
   db: sqlite3.Database
 ) {
-  const userId = parsedUrl.pathname!.split("/")[2]
-
   try {
+    const userId = parsedUrl.pathname!.split("/")[2]
+
     const user = await queryUser(db, userId)
 
     if (!user) {
@@ -105,22 +105,22 @@ export async function handlePutUser(
   parsedUrl: url.UrlWithParsedQuery,
   db: sqlite3.Database
 ) {
-  const userId = parsedUrl.pathname!.split("/")[2]
+  try {
+    const userId = parsedUrl.pathname!.split("/")[2]
 
-  const user = await queryUser(db, userId)
+    const user = await queryUser(db, userId)
 
-  if (!user) {
-    sendResponse(res, 404, { message: "User not found" })
-    return
-  }
+    if (!user) {
+      sendResponse(res, 404, { message: "User not found" })
+      return
+    }
 
-  let body: string = ""
-  req.on("data", (chunk: string) => {
-    body += chunk
-  })
+    let body: string = ""
+    req.on("data", (chunk: string) => {
+      body += chunk
+    })
 
-  req.on("end", () => {
-    try {
+    req.on("end", () => {
       const parsedBody = JSON.parse(body)
 
       const updates: string[] = []
@@ -149,8 +149,8 @@ export async function handlePutUser(
       updateUser(db, userId, updates, params).then(() => {
         sendResponse(res, 200, { message: "User updated" })
       })
-    } catch (error) {
-      sendResponse(res, 500, { message: "Internal Server Error" })
-    }
-  })
+    })
+  } catch (error) {
+    sendResponse(res, 500, { message: "Internal Server Error" })
+  }
 }
