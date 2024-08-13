@@ -19,9 +19,12 @@ export function handleRequest(req: IncomingMessage, res: ServerResponse) {
   if (parsedUrl.pathname?.startsWith("/user") && req.method === "POST") {
     handlePostUser(req, res, db)
   } else if (parsedUrl.pathname?.startsWith("/user/") && req.method === "GET") {
-    handleGetUser(req, res, parsedUrl, db)
-  } else if (parsedUrl.pathname?.startsWith("/user/") && req.method === "DELETE") {
-    handleDeleteUser(req, res, parsedUrl, db)
+    handleGetUser(res, parsedUrl, db)
+  } else if (
+    parsedUrl.pathname?.startsWith("/user/") &&
+    req.method === "DELETE"
+  ) {
+    handleDeleteUser(res, parsedUrl, db)
   } else if (parsedUrl.pathname?.startsWith("/user/") && req.method === "PUT") {
     handlePutUser(req, res, parsedUrl, db)
   } else {

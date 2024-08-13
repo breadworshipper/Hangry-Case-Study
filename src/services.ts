@@ -1,11 +1,20 @@
 import { IncomingMessage, ServerResponse } from "http"
 import * as url from "url"
-import { sendResponse, isValidEmail, isValidDate } from "./utils"
+import {
+  sendResponse,
+  isValidEmail,
+  isValidDate,
+  postUser,
+  updateUser,
+  queryUser,
+  deleteUser
+} from "./utils"
+import sqlite3 from "sqlite3"
 
-export function handlePostUser(
+export async function handlePostUser(
   req: IncomingMessage,
   res: ServerResponse,
-  db: any
+  db: sqlite3.Database
 ) {
   let body: string = ""
   req.on("data", (chunk: string) => {
@@ -16,7 +25,8 @@ export function handlePostUser(
     try {
       const parsedBody = JSON.parse(body)
 
-      const requiredAttributes: boolean = parsedBody.name && parsedBody.email && parsedBody.date_of_birth
+      const requiredAttributes: boolean =
+        parsedBody.name && parsedBody.email && parsedBody.date_of_birth
       const validEmail: boolean = isValidEmail(parsedBody.email)
       const validDate: boolean = isValidDate(parsedBody.date_of_birth)
 
@@ -24,91 +34,85 @@ export function handlePostUser(
         sendResponse(res, 400, { message: "Missing required attributes" })
         return
       }
-    if (!validEmail) {
+      if (!validEmail) {
         sendResponse(res, 400, { message: "Invalid email" })
         return
-    }
-    if (!validDate) {
+      }
+      if (!validDate) {
         sendResponse(res, 400, { message: "Invalid date of birth" })
         return
-    }
+      }
 
-      const sql: string = `INSERT INTO users (name, email, date_of_birth) VALUES (?, ?, ?)`
-
-      db.run(
-        sql,
-        [parsedBody.name, parsedBody.email, parsedBody.date_of_birth],
-        (err: any) => {
-          if (err) {
-            sendResponse(res, 500, { message: "Internal Server Error" })
-          } else {
-            sendResponse(res, 201, { message: "User created" })
-          }
-        }
-      )
-    } catch (error) {
-      console.error("Failed to parse JSON:", error)
-      sendResponse(res, 400, { message: "Invalid JSON" })
-    }
-  })
-}
-
-export function handleGetUser(
-  req: IncomingMessage,
-  res: ServerResponse,
-  parsedUrl: url.UrlWithParsedQuery,
-  db: any
-) {
-  const userId = parsedUrl.pathname!.split("/")[2]
-
-  const sql: string = `SELECT * FROM users WHERE id = ?`
-
-  db.get(sql, [userId], (err: any, row: any) => {
-    if (err) {
-      console.error("Failed to retrieve user:", err)
-      sendResponse(res, 500, { message: "Internal Server Error" })
-    } else if (!row) {
-      sendResponse(res, 404, { message: "User not found" })
-    } else {
-      sendResponse(res, 200, row)
-    }
-  })
-}
-
-export function handleDeleteUser(
-  req: IncomingMessage,
-  res: ServerResponse,
-  parsedUrl: url.UrlWithParsedQuery,
-  db: any
-) {
-  const userId = parsedUrl.pathname!.split("/")[2]
-
-  db.get(`SELECT * FROM users WHERE id = ?`, [userId], (err: any, row: any) => {
-    if (err) {
-      console.error("Failed to query user:", err)
-      sendResponse(res, 500, { message: "Internal Server Error" })
-    } else if (!row) {
-      sendResponse(res, 404, { message: "User not found" })
-    } else {
-      db.run(`DELETE FROM users WHERE id = ?`, [userId], (err: any) => {
-        if (err) {
-          console.error("Failed to delete user:", err)
-          sendResponse(res, 500, { message: "Internal Server Error" })
-        } else {
-          sendResponse(res, 200, { message: "User deleted" })
-        }
+      postUser(
+        db,
+        parsedBody.name,
+        parsedBody.email,
+        parsedBody.date_of_birth
+      ).then(() => {
+        sendResponse(res, 201, { message: "User created" })
       })
+    } catch (error) {
+      sendResponse(res, 500, { message: "Internal server error" })
     }
   })
 }
 
-export function handlePutUser(
+export async function handleGetUser(
+  res: ServerResponse,
+  parsedUrl: url.UrlWithParsedQuery,
+  db: sqlite3.Database
+) {
+  try {
+    const userId = parsedUrl.pathname!.split("/")[2]
+
+    const user = await queryUser(db, userId)
+
+    if (!user) {
+      sendResponse(res, 404, { message: "User not found" })
+      return
+    }
+    sendResponse(res, 200, user)
+  } catch (error) {
+    sendResponse(res, 500, { message: "Internal Server Error" })
+  }
+}
+
+export async function handleDeleteUser(
+  res: ServerResponse,
+  parsedUrl: url.UrlWithParsedQuery,
+  db: sqlite3.Database
+) {
+  const userId = parsedUrl.pathname!.split("/")[2]
+
+  try {
+    const user = await queryUser(db, userId)
+
+    if (!user) {
+      sendResponse(res, 404, { message: "User not found" })
+      return
+    }
+
+    await deleteUser(db, userId)
+    sendResponse(res, 200, { message: "User deleted" })
+  } catch (error) {
+    sendResponse(res, 500, { message: "Internal Server Error" })
+  }
+}
+
+export async function handlePutUser(
   req: IncomingMessage,
   res: ServerResponse,
   parsedUrl: url.UrlWithParsedQuery,
-  db: any
+  db: sqlite3.Database
 ) {
   const userId = parsedUrl.pathname!.split("/")[2]
+
+  const user = await queryUser(db, userId)
+
+  if (!user) {
+    sendResponse(res, 404, { message: "User not found" })
+    return
+  }
 
   let body: string = ""
   req.on("data", (chunk: string) => {
@@ -142,19 +146,11 @@ export function handlePutUser(
 
       params.push(userId)
 
-      const sql: string = `UPDATE users SET ${updates.join(", ")} WHERE id = ?`
-
-      db.run(sql, params, (err: any) => {
-        if (err) {
-          console.error("Failed to update user:", err)
-          sendResponse(res, 500, { message: "Internal Server Error" })
-        } else {
-          sendResponse(res, 200, { message: "User updated" })
-        }
+      updateUser(db, userId, updates, params).then(() => {
+        sendResponse(res, 200, { message: "User updated" })
       })
     } catch (error) {
-      console.error("Failed to parse JSON:", error)
-      sendResponse(res, 400, { message: "Invalid JSON" })
+      sendResponse(res, 500, { message: "Internal Server Error" })
     }
   })
 }
