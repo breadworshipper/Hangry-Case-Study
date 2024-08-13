@@ -76,7 +76,6 @@ export function deleteUser(
 
 export function updateUser(
   db: sqlite3.Database,
-  userId: string,
   updates: string[],
   params: (string | number)[]
 ): Promise<void> {

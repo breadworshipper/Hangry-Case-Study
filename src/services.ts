@@ -146,7 +146,7 @@ export async function handlePutUser(
 
       params.push(userId)
 
-      updateUser(db, userId, updates, params).then(() => {
+      updateUser(db, updates, params).then(() => {
         sendResponse(res, 200, { message: "User updated" })
       })
     })
