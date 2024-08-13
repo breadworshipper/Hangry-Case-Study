@@ -6,7 +6,8 @@ import {
   isValidDate,
   postUser,
   updateUser,
-  queryUser,
+  queryUserById,
+  queryUserByEmail,
   deleteUser
 } from "./utils"
 import sqlite3 from "sqlite3"
@@ -22,35 +23,44 @@ export async function handlePostUser(
       body += chunk
     })
 
-    req.on("end", () => {
-      const parsedBody = JSON.parse(body)
+    req.on("end", async () => {
+        try {
+          const parsedBody = JSON.parse(body)
 
-      const requiredAttributes: boolean =
-        parsedBody.name && parsedBody.email && parsedBody.date_of_birth
-      const validEmail: boolean = isValidEmail(parsedBody.email)
-      const validDate: boolean = isValidDate(parsedBody.date_of_birth)
+          const requiredAttributes: boolean =
+            parsedBody.name && parsedBody.email && parsedBody.date_of_birth
+          const validEmail: boolean = isValidEmail(parsedBody.email)
+          const validDate: boolean = isValidDate(parsedBody.date_of_birth)
 
-      if (!requiredAttributes) {
-        sendResponse(res, 400, { message: "Missing required attributes" })
-        return
-      }
-      if (!validEmail) {
-        sendResponse(res, 400, { message: "Invalid email" })
-        return
-      }
-      if (!validDate) {
-        sendResponse(res, 400, { message: "Invalid date of birth" })
-        return
-      }
+          if (!requiredAttributes) {
+            sendResponse(res, 400, { message: "Missing required attributes" })
+            return
+          }
+          if (!validEmail) {
+            sendResponse(res, 400, { message: "Invalid email" })
+            return
+          }
+          if (!validDate) {
+            sendResponse(res, 400, { message: "Invalid date of birth" })
+            return
+          }
 
-      postUser(
-        db,
-        parsedBody.name,
-        parsedBody.email,
-        parsedBody.date_of_birth
-      ).then(() => {
-        sendResponse(res, 201, { message: "User created" })
-      })
+        const existingUser = await queryUserByEmail(db, parsedBody.email)
+        if (existingUser) {
+            sendResponse(res, 409, { message: "Email already exists" })
+            return
+        }
+
+          await postUser(
+            db,
+            parsedBody.name,
+            parsedBody.email,
+            parsedBody.date_of_birth
+          )
+          sendResponse(res, 201, { message: "User created" })
+        } catch (error) {
+          sendResponse(res, 500, { message: `Internal server error: ${error}` })
+        }
     })
   } catch (error) {
     sendResponse(res, 500, { message: "Internal server error" })
@@ -65,7 +75,7 @@ export async function handleGetUser(
   try {
     const userId = parsedUrl.pathname!.split("/")[2]
 
-    const user = await queryUser(db, userId)
+    const user = await queryUserById(db, userId)
 
     if (!user) {
       sendResponse(res, 404, { message: "User not found" })
@@ -85,7 +95,7 @@ export async function handleDeleteUser(
   try {
     const userId = parsedUrl.pathname!.split("/")[2]
 
-    const user = await queryUser(db, userId)
+    const user = await queryUserById(db, userId)
 
     if (!user) {
       sendResponse(res, 404, { message: "User not found" })
@@ -108,7 +118,7 @@ export async function handlePutUser(
   try {
     const userId = parsedUrl.pathname!.split("/")[2]
 
-    const user = await queryUser(db, userId)
+    const user = await queryUserById(db, userId)
 
     if (!user) {
       sendResponse(res, 404, { message: "User not found" })
