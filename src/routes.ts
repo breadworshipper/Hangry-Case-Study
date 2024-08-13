@@ -9,7 +9,7 @@ import {
 } from "./services"
 import { sendResponse } from "./utils"
 
-export function handleRequest(req: IncomingMessage, res: ServerResponse) {
+export async function handleRequest(req: IncomingMessage, res: ServerResponse) {
   const parsedUrl = url.parse(req.url || "", true)
 
   if (res.headersSent) {
@@ -17,16 +17,16 @@ export function handleRequest(req: IncomingMessage, res: ServerResponse) {
   }
 
   if (parsedUrl.pathname?.startsWith("/user") && req.method === "POST") {
-    handlePostUser(req, res, db)
+    await handlePostUser(req, res, db)
   } else if (parsedUrl.pathname?.startsWith("/user/") && req.method === "GET") {
-    handleGetUser(res, parsedUrl, db)
+    await handleGetUser(res, parsedUrl, db)
   } else if (
     parsedUrl.pathname?.startsWith("/user/") &&
     req.method === "DELETE"
   ) {
-    handleDeleteUser(res, parsedUrl, db)
+    await handleDeleteUser(res, parsedUrl, db)
   } else if (parsedUrl.pathname?.startsWith("/user/") && req.method === "PUT") {
-    handlePutUser(req, res, parsedUrl, db)
+    await handlePutUser(req, res, parsedUrl, db)
   } else {
     sendResponse(res, 404, { message: "Route not found" })
   }
