@@ -41,7 +41,7 @@ export function postUser(
   })
 }
 
-export function queryUser(db: sqlite3.Database, userId: string): Promise<any> {
+export function queryUserById(db: sqlite3.Database, userId: string): Promise<any> {
   return new Promise((resolve, reject) => {
     db.get(
       `SELECT * FROM users WHERE id = ?`,
@@ -57,6 +57,24 @@ export function queryUser(db: sqlite3.Database, userId: string): Promise<any> {
       }
     )
   })
+}
+
+export function queryUserByEmail(db: sqlite3.Database, email: string): Promise<any> {
+    return new Promise((resolve, reject) => {
+        db.get(
+        `SELECT * FROM users WHERE email = ?`,
+        [email],
+        (err: any, row: any) => {
+            if (err) {
+            reject(new Error(`Failed to query user: ${err.message}`))
+            } else if (!row) {
+            resolve(null)
+            } else {
+            resolve(row)
+            }
+        }
+        )
+    })
 }
 
 export function deleteUser(
